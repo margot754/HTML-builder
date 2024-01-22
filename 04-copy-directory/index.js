@@ -15,7 +15,9 @@ async function createDestFolder() {
 
 async function readFiles(){
   try {
+   
     return await fs.readdir(srcPath);
+    
   } catch (error) {
     console.error(`Error reading directory: ${error.message}`);
   }
@@ -23,7 +25,7 @@ async function readFiles(){
 
 async function copyFiles() {
   const files = await readFiles();
-
+ 
   for (const file of files) {
     const srcFile = path.join(srcPath, file);
     const destFile = path.join(destPath, file);
