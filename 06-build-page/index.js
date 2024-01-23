@@ -10,100 +10,111 @@ const assetsOutPath = path.join(outPath, 'assets');
 const componentsPath = path.join(__dirname, 'components');
 
 async function readTemplate() {
-    try {
-        const templatePath = path.join(__dirname, 'template.html');
-        return await fs.readFile(templatePath, 'utf8');
-    } catch (err) {
-        throw new Error(`Error reading the template: ${err.message}`);
-    }
+  try {
+    const templatePath = path.join(__dirname, 'template.html');
+    return await fs.readFile(templatePath, 'utf8');
+  } catch (err) {
+    throw new Error(`Error reading the template: ${err.message}`);
+  }
 }
 
 async function replaceTemplateTags(templateContent, components) {
-    for (const componentName in components) {
-        if (components.hasOwnProperty(componentName)) {
-            const placeholder = `{{${componentName}}}`;
-            const componentContent = components[componentName];
+  for (const componentName in components) {
+    // eslint-disable-next-line no-prototype-builtins
+    if (components.hasOwnProperty(componentName)) {
+      const placeholder = `{{${componentName}}}`;
+      const componentContent = components[componentName];
 
-            templateContent = templateContent.split(placeholder).join(componentContent);
-        }
+      templateContent = templateContent
+        .split(placeholder)
+        .join(componentContent);
     }
+  }
 
-    return templateContent;
+  return templateContent;
 }
 
 async function copyFolder(source, destination) {
-    try {
-        await fs.mkdir(destination, { recursive: true });
+  try {
+    await fs.mkdir(destination, { recursive: true });
 
-        const files = await fs.readdir(source);
+    const files = await fs.readdir(source);
 
-        await Promise.all(files.map(async file => {
-            const sourcePath = path.join(source, file);
-            const destinationPath = path.join(destination, file);
+    await Promise.all(
+      files.map(async (file) => {
+        const sourcePath = path.join(source, file);
+        const destinationPath = path.join(destination, file);
 
-            const stat = await fs.stat(sourcePath);
+        const stat = await fs.stat(sourcePath);
 
-            if (stat.isDirectory()) {
-            
-                await copyFolder(sourcePath, destinationPath);
-            } else {
-                await fs.copyFile(sourcePath, destinationPath);
-            }
-        }));
+        if (stat.isDirectory()) {
+          await copyFolder(sourcePath, destinationPath);
+        } else {
+          await fs.copyFile(sourcePath, destinationPath);
+        }
+      }),
+    );
 
-        console.log(`Files successfully copied from: ${source} to: ${destination}`);
-    } catch (err) {
-        throw new Error(`Error copying files: ${err.message}`);
-    }
+    console.log(`Files successfully copied from: ${source} to: ${destination}`);
+  } catch (err) {
+    throw new Error(`Error copying files: ${err.message}`);
+  }
 }
 
 async function buildPage() {
-    try {
-       
-        const templateContent = await readTemplate();
-        const componentFiles = await fs.readdir(componentsPath);
+  try {
+    await fs.mkdir(outPath, { recursive: true }); 
+    const templateContent = await readTemplate();
+    const componentFiles = await fs.readdir(componentsPath);
 
-        const components = {};
-        await Promise.all(componentFiles.map(async componentName => {
-            const componentPath = path.join(componentsPath, componentName);
-            const componentContent = await fs.readFile(componentPath, 'utf8');
-            components[path.basename(componentName, '.html')] = componentContent;
-            // console.log(components)
-        }));
+    const components = {};
+    await Promise.all(
+      componentFiles.map(async (componentName) => {
+        const componentPath = path.join(componentsPath, componentName);
+        components[path.basename(componentName, '.html')] = await fs.readFile(
+          componentPath,
+          'utf8',
+        );
+        // console.log(components)
+      }),
+    );
 
-        const pageContent = await replaceTemplateTags(templateContent, components);
+    const pageContent = await replaceTemplateTags(templateContent, components);
 
-        await fs.writeFile(indexFile, pageContent, 'utf8');
-        console.log(`Page successfully built in: ${indexFile}`);
+    await fs.writeFile(indexFile, pageContent, 'utf8');
+    console.log(`Page successfully built in: ${indexFile}`);
 
-        await compileStyles();
-        await copyFolder(assetsPath, assetsOutPath);
-        console.log('Assets successfully copied.');
-    } catch (err) {
-        console.error('Error:', err.message);
-    }
+    await compileStyles();
+    await copyFolder(assetsPath, assetsOutPath);
+    console.log('Assets successfully copied.');
+  } catch (err) {
+    console.error('Error:', err.message);
+  }
 }
 
 async function compileStyles() {
-    try {
-        const stylesArray = [];
-        const files = await fs.readdir(stylesPath);
+  try {
+   
+    const stylesArray = [];
+    const files = await fs.readdir(stylesPath);
 
-        const cssFiles = files.filter(file => file.endsWith('.css'));
+    const cssFiles = files.filter((file) => file.endsWith('.css'));
 
-        await Promise.all(cssFiles.map(async cssFile => {
-            const filePath = path.join(stylesPath, cssFile);
-            const fileContent = await fs.readFile(filePath, 'utf8');
-            stylesArray.push(fileContent);
-        }));
+    await Promise.all(
+      cssFiles.map(async (cssFile) => {
+        const filePath = path.join(stylesPath, cssFile);
+        const fileContent = await fs.readFile(filePath, 'utf8');
+        stylesArray.push(fileContent);
+      }),
+    );
 
-        const bundleContent = stylesArray.join('\n');
+    const bundleContent = stylesArray.join('\n');
 
-        await fs.writeFile(styleFile, bundleContent, 'utf8');
-        console.log(`Styles successfully compiled into: ${styleFile}`);
-    } catch (err) {
-        throw new Error(`Error compiling styles: ${err.message}`);
-    }
+    await fs.writeFile(styleFile, bundleContent, 'utf8');
+    console.log(`Styles successfully compiled into: ${styleFile}`);
+  } catch (err) {
+    throw new Error(`Error compiling styles: ${err.message}`);
+  }
 }
 
 buildPage();

@@ -4,40 +4,39 @@ const path = require('path');
 const srcPath = path.join(__dirname, 'files');
 const destPath = path.join(__dirname, 'files-copy');
 
-async function createDestFolder() {
+async function copyFolder() {
   try {
-    await fs.mkdir(destPath, {recursive: true} );
+    // Remove the 'files-copy' folder and its contents
+    await fs.rm(destPath, { recursive: true, force: true });
+
+    // Create 'files-copy' folder
+    await fs.mkdir(destPath, { recursive: true });
     console.log(`Created 'files-copy' folder.`);
   } catch (error) {
-    console.error(`Error creating 'files-copy' folder: ${error.message}`);
+    console.error(`Error ensuring clean 'files-copy' folder: ${error.message}`);
+    throw error;
   }
-};
-
-async function readFiles(){
-  try {
-   
-    return await fs.readdir(srcPath);
-    
-  } catch (error) {
-    console.error(`Error reading directory: ${error.message}`);
-  }
-};
-
-async function copyFiles() {
   const files = await readFiles();
- 
+
   for (const file of files) {
     const srcFile = path.join(srcPath, file);
     const destFile = path.join(destPath, file);
 
     try {
-        await fs.copyFile(srcFile, destFile);
+      await fs.copyFile(srcFile, destFile);
       console.log(`Copied file: ${file}`);
     } catch (error) {
       console.error(`Error copying file ${file}: ${error.message}`);
     }
   }
-};
+}
 
-createDestFolder();
-copyFiles();
+async function readFiles() {
+  try {
+    return await fs.readdir(srcPath);
+  } catch (error) {
+    console.error(`Error reading directory: ${error.message}`);
+  }
+}
+
+copyFolder();
